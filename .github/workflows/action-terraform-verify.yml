@@ -1,0 +1,52 @@
+name: Terraform Format & Validate
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  fmt_validate:
+    runs-on: ubuntu-latest
+    name: Terraform fmt & validate
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.2.4
+
+      - name: Fetch changed files
+        id: pr_files
+        uses: jitterbit/get-changed-files@v1
+        with:
+          format: "space-delimited"
+
+      - name: Check terraform fmt on changed files
+        run: |
+          set +e
+          EXIT_CODE=0
+          for file in ${{ steps.pr_files.outputs.added_modified }}; do
+            if [[ $file == *.tf ]]; then
+              echo "Checking terraform fmt for: $file"
+              terraform fmt -check $file
+              if [ $? -ne 0 ]; then
+                echo "❌ Format issue in $file" >> $GITHUB_STEP_SUMMARY
+                EXIT_CODE=1
+              fi
+            fi
+          done
+          exit $EXIT_CODE
+
+      - name: terraform validate
+        run: |
+          terraform init -backend=false
+          terraform validate
