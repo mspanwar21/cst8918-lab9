@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+npm test
+terraform fmt -check -recursive
+terraform validate
+tflint
